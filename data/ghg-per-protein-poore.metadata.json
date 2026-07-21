@@ -1,0 +1,45 @@
+{
+  "chart": {
+    "title": "Greenhouse gas emissions per 100 grams of protein",
+    "subtitle": "Greenhouse gas emissions are measured in kilograms of carbon dioxide-equivalents.",
+    "citation": "Poore and Nemecek (2018)",
+    "originalChartUrl": "https://ourworldindata.org/grapher/ghg-per-protein-poore?v=1&csvType=full&useColumnShortNames=false",
+    "selection": [
+      "Pig Meat",
+      "Beef (beef herd)",
+      "Eggs",
+      "Lamb & Mutton",
+      "Grains",
+      "Milk",
+      "Other Pulses",
+      "Poultry Meat",
+      "Tofu (soybeans)",
+      "Peas",
+      "Nuts",
+      "Groundnuts",
+      "Fish (farmed)",
+      "Cheese",
+      "Beef (dairy herd)",
+      "Prawns (farmed)"
+    ]
+  },
+  "columns": {
+    "GHG emissions per 100g protein (Poore & Nemecek, 2018)": {
+      "titleShort": "Greenhouse gas emissions per 100g protein",
+      "titleLong": "Greenhouse gas emissions per 100g protein",
+      "descriptionShort": "Global average greenhouse gas emissions (GHG) per 100 grams of protein across different food products. This is measured in kilograms of CO₂-equivalents per 100 grams of protein (kgCO₂eq per 100g protein).",
+      "shortUnit": "kg",
+      "unit": "kgCO₂eq per 100g protein",
+      "timespan": "2010-2010",
+      "type": "Numeric",
+      "owidVariableId": 1206174,
+      "shortName": "ghg_emissions_per_100g_protein__poore__and__nemecek__2018",
+      "lastUpdated": "2019-10-08",
+      "citationShort": "Poore and Nemecek (2018) – processed by Our World in Data",
+      "citationLong": "Poore and Nemecek (2018) – processed by Our World in Data. “Greenhouse gas emissions per 100g protein” [dataset]. Poore and Nemecek, “Reducing food's environmental impacts through producers and consumers” [original data].",
+      "fullMetadata": "https://api.ourworldindata.org/v1/indicators/1206174.metadata.json"
+    }
+  },
+  "dateDownloaded": "2026-07-21",
+  "activeFilters": {}
+}
