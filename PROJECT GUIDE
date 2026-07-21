@@ -7,28 +7,50 @@ Analysis of how food choices and food waste drive greenhouse-gas emissions, and 
 ## Repo structure
 ```
 JH-2026-Final-Project/
-├─ PROJECT_GUIDE.md
+├─ PROJECT GUIDE
 ├─ README.md
 ├─ requirements.txt
+├─ GHG_EDA.ipynb                        # exploratory archive
+├─ food_product_emissions_eda.ipynb     # exploratory archive
+├─ food_product_emissions_eda_2.ipynb   # exploratory archive
+├─ refed_food_surplus_eda.ipynb         # exploratory archive
 ├─ data/
-│  ├─ Food_Product_Emissions.csv       # slides 2, 4, 6, 9
-│  ├─ ghg-emissions.csv                # slides 3, 10
-│  ├─ ReFED_surplus_table.xlsx         # slides 7, 10
-│  └─ ghg-per-protein-poore.csv        # slide 5   (to add)
+│  ├─ Food_Product_Emissions.csv                 # slides 2, 4, 6, 9
+│  ├─ ghg-emissions.csv                          # slides 3, 10
+│  ├─ ReFED_surplus_table(Surplus Data).csv      # slides 7, 10
+│  ├─ ghg-per-protein-poore.csv                  # slide 5
+│  ├─ ghg-per-protein-poore.metadata.json        # sidecar metadata
+│  └─ readme.md                                  # data readme
 ├─ notebooks/
 │  ├─ 01_food_emissions.ipynb          # slides 2, 4, 5
-│  ├─ 02_sector_context.ipynb          # slides 3, 10
+│  ├─ 02_sector_context.ipynb          # slides 3, 10  (pending — Dominika; slide 10 covered inside 04)
 │  ├─ 03_food_clustering.ipynb         # slide 6   (the model)
 │  ├─ 04_refed_waste.ipynb             # slides 7, 10
 │  └─ 05_playbook.ipynb                # slide 9
-└─ figures/                            # charts auto-export here for the deck
+└─ figures/                            # per-slide PNGs exported for the deck
+   ├─ fig_slide02_beef_vs_peas.png
+   ├─ fig_slide04_perkg_spread.png
+   ├─ fig_slide05_per_protein.png
+   ├─ fig_slide05_rank_flip.png
+   ├─ fig_slide06_clusters_pca.png
+   ├─ fig_slide06_composition_check.png
+   ├─ fig_slide06_dendrogram.png
+   ├─ fig_slide06_silhouette.png
+   ├─ fig_slide06_stage_stacked.png
+   ├─ fig_slide07_carbon_intensity.png
+   ├─ fig_slide07_surplus_tons_vs_ghg.png
+   ├─ fig_slide09_annual_example.png
+   ├─ fig_slide09_swaps.png
+   └─ fig_slide10_levers.png
 ```
+
+The older root `*_eda.ipynb` notebooks are kept as an exploratory archive; the `notebooks/` series is the polished analysis. Install dependencies with `pip install -r requirements.txt`.
 
 ## Ideal Notebook → presentation mapping
 | Notebook | Roadmap slides | Produces |
 |---|---|---|
 | 01_food_emissions | 2, 4, 5 | beef-vs-peas, per-kg spread, per-protein |
-| 02_sector_context | 3, 10 | food/ag share of global emissions |
+| 02_sector_context | 3, 10 | food/ag share of global emissions (pending — Dominika; slide 10 already covered in 04) |
 | 03_food_clustering | 6 | the k-means model + stage profiles |
 | 04_refed_waste | 7, 10 | waste by sector (tons vs carbon) |
 | 05_playbook | 9 | emissions saved per food swap |
@@ -39,5 +61,5 @@ Slides 1 (title), 8 (SB 1383 flow diagram + pantry numbers), 11 (close), 12 (app
 ## Data sources
 - **Food_Product_Emissions.csv** — Poore & Nemecek (2018), per-kg food LCA. *Slides 2, 4, 6, 9.*
 - **ghg-emissions.csv** — Climate Watch / OWID, global GHG by sector. *Slides 3, 10.*
-- **ReFED_surplus_table.xlsx** — ReFED, US food surplus by sector (2024). *Slides 7, 10.*
-- **ghg-per-protein-poore.csv** — OWID, emissions per 100g protein (add for slide 5). *Slide 5.*
+- **ReFED_surplus_table(Surplus Data).csv** — ReFED, US food surplus by sector (2024). *Slides 7, 10.*
+- **ghg-per-protein-poore.csv** — OWID, emissions per 100g protein. *Slide 5.* (metadata/readme sidecars alongside in data/)
