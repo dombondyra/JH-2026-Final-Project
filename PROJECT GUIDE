@@ -23,7 +23,7 @@ JH-2026-Final-Project/
 │  └─ readme.md                                  # data readme
 ├─ notebooks/
 │  ├─ 01_food_emissions.ipynb          # slides 2, 4, 5
-│  ├─ 02_sector_context.ipynb          # slides 3, 10  (pending — Dominika; slide 10 covered inside 04)
+│  ├─ 02_sector_context.ipynb          # slides 3, 10  
 │  ├─ 03_food_clustering.ipynb         # slide 6   (the model)
 │  ├─ 04_refed_waste.ipynb             # slides 7, 10
 │  └─ 05_playbook.ipynb                # slide 9
