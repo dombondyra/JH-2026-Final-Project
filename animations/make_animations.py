@@ -29,9 +29,12 @@ import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.animation import FFMpegWriter
+from matplotlib.colors import to_rgba
 from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
 from matplotlib.ticker import StrMethodFormatter
+from scipy.cluster.hierarchy import dendrogram, fcluster, linkage
 from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import StandardScaler
 
 import imageio_ffmpeg
 
@@ -43,13 +46,30 @@ mpl.rcParams['animation.ffmpeg_path'] = imageio_ffmpeg.get_ffmpeg_exe()
 # lags makes the presenter wait. Tune here and re-render.
 DURATION = {
     'slide03': 7.0,    # 2 beats: measured series -> dashed projection
+    'slide08': 10.0,   # 42 beats: links merge in Ward distance order
     'slide09': 8.0,    # 4 beats: bars bottom-up, 315 -> 764
     'slide10': 8.0,    # 3 beats: left panel -> right panel -> callouts
     'slide12': 12.0,   # 6 beats: the SB 1383 reroute, start to finish
     'slide15': 9.0,    # 4 beats: beef/peas + 66x -> three action cards
 }
+
+# Longer cuts of the same build, for slides that get more airtime. The whole
+# schedule is stretched uniformly to fill the target - beats, motion and pauses
+# alike - so the pacing above is preserved in proportion and the build finishes
+# just before the video ends. These are written alongside the base version with
+# a _NNs suffix; the base file is never overwritten.
+VARIANTS = {
+    'slide03': (20, 30, 40),
+    'slide08': (10, 20, 30, 40),
+    'slide09': (20, 30, 40),
+    'slide10': (20, 30, 40),
+    'slide12': (20, 30, 40),
+    'slide15': (20, 30, 40),
+}
+
 FPS = 30
 FIGSIZE = (12.8, 7.2)   # 16:9, matches the slide
+FIGSIZE_TALL = (8.5, 10.0)   # slide 8 keeps the static figure's portrait shape
 DPI = 150               # -> 1920x1080
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -69,6 +89,7 @@ BLUE = '#2a78d6'
 BLUE_DEEP = '#104281'
 BLUE_PALE = '#e8f0fb'
 GREEN = '#008300'
+MAGENTA = '#e87ba4'
 RED = '#b03a2e'
 
 mpl.rcParams.update({
@@ -137,22 +158,38 @@ def fmt1(v: float) -> str:
     return f'{v:,.0f}' if abs(v - round(v)) < 0.05 else f'{v:,.1f}'
 
 
-def render(name: str, fig, update, seconds: float):
-    """Drive `update(t)` over `seconds` and write an mp4 beside this script."""
+def render(name: str, fig, update, base: float, seconds: float = None):
+    """Drive `update` over `seconds` of wall clock and write an mp4.
+
+    `base` is the duration the builder's schedule was written against. When
+    `seconds` differs, time is scaled so the same schedule fills the longer
+    run: every beat, motion and pause stretches by the same factor, which
+    keeps the tuned proportions and lands the final frame just before the end.
+    """
+    seconds = base if seconds is None else seconds
     path = OUT / name
     n = int(round(seconds * FPS))
+    warp = base / seconds
+
+    # Height is pinned to 1080 and the width follows the figure's aspect, so a
+    # 16:9 build lands at 1920x1080 and the portrait dendrogram at 918x1080.
+    dpi = 1080 / fig.get_figheight()
+    w, h = int(round(fig.get_figwidth() * dpi)), 1080
+    if w % 2 or h % 2:
+        raise ValueError(f'{name}: {w}x{h} has an odd dimension; H.264 needs even')
+
     writer = FFMpegWriter(
         fps=FPS, codec='libx264',
         # yuv420p is what PowerPoint and QuickTime will actually decode.
         extra_args=['-pix_fmt', 'yuv420p', '-crf', '18', '-preset', 'slow'],
     )
-    with writer.saving(fig, str(path), dpi=DPI):
+    with writer.saving(fig, str(path), dpi=dpi):
         for i in range(n + 1):
-            update(i / FPS)
+            update(i / FPS * warp)
             writer.grab_frame()
     plt.close(fig)
-    size_mb = path.stat().st_size / 1e6
-    print(f'  wrote {path.name}  {seconds:.1f}s  {n + 1} frames  {size_mb:.1f} MB')
+    print(f'  wrote {path.name:46s} {seconds:5.1f}s  {w}x{h}  '
+          f'{n + 1:5d} frames  {path.stat().st_size / 1e6:5.2f} MB')
 
 
 # =========================================================== slide 3 ========
@@ -229,6 +266,104 @@ def build_slide03():
         p2 = beat(t, 3.4, 2.0)                 # projection extends
         line_proj.set_data(*partial_line(future_years, future, p2))
         lab_proj.set_alpha(beat(t, 4.6, 0.7))
+
+    return fig, update, D
+
+
+# =========================================================== slide 8 ========
+def build_slide08():
+    """The tree assembles itself, nearest pair first.
+
+    Links appear in ascending Ward distance, which is the order the algorithm
+    actually merges in: tight pairs snap together early, the three families
+    resolve in the middle, and the grey links that join different families
+    arrive last - which is the slide's whole point. Leaf labels and axes are
+    present from frame 0 so nothing reflows.
+
+    Ward linkage is deterministic, so this recomputes the published figure
+    exactly; it does not touch the k-means step whose numbers are validated.
+    """
+    df = pd.read_csv(DATA / 'Food_Product_Emissions.csv')
+    STAGES = ['Land Use Change', 'Feed', 'Farm', 'Processing',
+              'Transport', 'Packaging', 'Retail']
+    X = StandardScaler().fit_transform(df[STAGES].to_numpy())
+    Z = linkage(X, method='ward')
+    cut3 = fcluster(Z, t=3, criterion='maxclust')
+
+    # Colour each link by the 3-cluster cut, exactly as notebook 03 does:
+    # a link inherits a family colour only if both children sit in the same
+    # family, otherwise it is grey.
+    pos = {f: i for i, f in enumerate(df['Food product'])}
+    ward_color = {int(cut3[pos['Beef (beef herd)']]): BLUE,
+                  int(cut3[pos['Palm Oil']]): MAGENTA}
+    for c in set(cut3):
+        ward_color.setdefault(int(c), GREEN)
+
+    n = len(df)
+    cluster_of = {i: int(cut3[i]) for i in range(n)}
+    link_cols = {}
+    for i, (a, b_, *_rest) in enumerate(Z):
+        ca, cb = cluster_of.get(int(a)), cluster_of.get(int(b_))
+        same = ca if (ca == cb and ca is not None) else None
+        cluster_of[n + i] = same
+        link_cols[n + i] = ward_color[same] if same is not None else AXIS
+
+    fig, ax = plt.subplots(figsize=FIGSIZE_TALL)
+    fig.subplots_adjust(left=0.225, right=0.975, top=0.873, bottom=0.093)
+
+    dendrogram(Z, labels=df['Food product'].tolist(), orientation='right',
+               link_color_func=lambda nid: link_cols.get(nid, AXIS),
+               ax=ax, leaf_font_size=9)
+
+    for lbl in ax.get_ymajorticklabels():
+        lbl.set_color(SUB)
+    ax.tick_params(axis='y', length=0)
+    ax.set_xlabel('Ward linkage distance (standardized absolute stage space)')
+    ax.set_axisbelow(True)
+    ax.grid(True, axis='x', color=GRID, linewidth=0.8)
+    ax.grid(False, axis='y')
+    for side in ('top', 'right', 'left'):
+        ax.spines[side].set_visible(False)
+    ax.spines['bottom'].set_color(AXIS)
+
+    ax.set_title('A different algorithm finds the same three families',
+                 loc='left', fontsize=13, fontweight=600, color=INK, pad=44)
+    ax.text(0, 1.02,
+            'Ward hierarchical clustering on the 7 standardized absolute stage-level '
+            'features (kg CO2e per kg,\nglobal averages, 43 foods), colored by the '
+            '3-cluster cut; gray links join different families',
+            transform=ax.transAxes, fontsize=9.5, color=SUB, va='bottom')
+    fig.text(0.01, 0.03, 'Source: Poore & Nemecek (2018), via Our World in Data',
+             fontsize=8.5, color=MUTED, ha='left')
+
+    # scipy draws one LineCollection per colour; animate per-segment alpha by
+    # rewriting each collection's RGBA array every frame.
+    layers = []
+    heights_all = []
+    for coll in ax.collections:
+        segs = coll.get_segments()
+        h = np.array([s[:, 0].max() for s in segs])     # x is distance here
+        layers.append([coll, h, np.array(to_rgba(coll.get_colors()[0]))])
+        heights_all.append(h)
+    order = np.sort(np.concatenate(heights_all))
+    n_links = len(order)
+    if n_links != len(Z):
+        raise RuntimeError(f'expected {len(Z)} links, collected {n_links}')
+
+    T0, SPAN, FADE = 0.35, 8.0, 0.35
+    step = SPAN / max(n_links - 1, 1)
+    for layer in layers:
+        layer.append(T0 + np.searchsorted(order, layer[1]) * step)   # start times
+
+    D = DURATION['slide08']
+
+    def update(t):
+        for coll, _h, rgba0, starts in layers:
+            a = np.clip((t - starts) / FADE, 0.0, 1.0)
+            a = a * a * (3.0 - 2.0 * a)
+            rgba = np.tile(rgba0, (len(starts), 1))
+            rgba[:, 3] = a
+            coll.set_color(rgba)
 
     return fig, update, D
 
@@ -701,24 +836,41 @@ def build_slide15():
 
 
 BUILDERS = {
-    '03': ('anim_slide03_regression.mp4', build_slide03),
-    '09': ('anim_slide09_practical_scenarios.mp4', build_slide09),
-    '10': ('anim_slide10_surplus_tons_vs_ghg.mp4', build_slide10),
-    '12': ('anim_slide12_sb1383.mp4', build_slide12),
-    '15': ('anim_slide15_close.mp4', build_slide15),
+    '03': ('anim_slide03_regression', build_slide03),
+    '08': ('anim_slide08_dendrogram', build_slide08),
+    '09': ('anim_slide09_practical_scenarios', build_slide09),
+    '10': ('anim_slide10_surplus_tons_vs_ghg', build_slide10),
+    '12': ('anim_slide12_sb1383', build_slide12),
+    '15': ('anim_slide15_close', build_slide15),
 }
 
 
 def main(argv):
-    want = [a.zfill(2) for a in argv] or list(BUILDERS)
+    args = [a for a in argv if not a.startswith('--')]
+    base_only = '--base-only' in argv
+    variants_only = '--variants-only' in argv
+
+    want = [a.zfill(2) for a in args] or list(BUILDERS)
     unknown = [w for w in want if w not in BUILDERS]
     if unknown:
         raise SystemExit(f'unknown slide(s): {unknown}; have {sorted(BUILDERS)}')
+
     for key in want:
-        name, fn = BUILDERS[key]
-        print(f'slide {key}:')
-        fig, update, seconds = fn()
-        render(name, fig, update, seconds)
+        stem, fn = BUILDERS[key]
+        slide = f'slide{key}'
+        base = DURATION[slide]
+        print(f'slide {key}  (schedule written for {base:.0f}s):')
+
+        targets = []
+        if not variants_only:
+            targets.append((f'{stem}.mp4', None))
+        if not base_only:
+            targets += [(f'{stem}_{s}s.mp4', float(s)) for s in VARIANTS.get(slide, ())]
+
+        for name, seconds in targets:
+            # Rebuilt per render: each run mutates its artists to the final frame.
+            fig, update, _ = fn()
+            render(name, fig, update, base, seconds)
 
 
 if __name__ == '__main__':
